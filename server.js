@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import userRoutes from "./routes/userRoutes.js"; // Import the router
 import postRoutes from "./routes/postRoutes.js"
 import { v2 as cloudinary } from 'cloudinary';
-import connectDB from "./db/connectDb.js";
+import connectDB from "./connectDB.js"
 dotenv.config();
 
 cloudinary.config({
@@ -25,6 +25,6 @@ app.use(cookieParser());
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 
-app.listen(5000, () => {
-    console.log(`Server started on port 5000`);
+app.listen(PORT, () => {
+    console.log(`Server started on port ${PORT}`);
 });
