@@ -43,7 +43,7 @@ const getPost = async (req, res) => {
     try {
         const post = await Post.findById(req.params.id)
         if (!post) return res.status(404).json({ error: "No post found" })
-        res.status(200).json({ post })
+        res.status(200).json( post )
     } catch (err) {
         res.status(500).json({ error: err.message })
         console.log("Error in get", err);
@@ -53,8 +53,14 @@ const getPost = async (req, res) => {
 const deletePost = async (req, res) => {
     try {
         const post = await Post.findById(req.params.id)
-        if (!post) return res.status(400).json({ error: "Post doesnt exists" })
+        if (!post) return res.status(404).json({ error: "Post doesnt exists" })
+        console.log(post.postedBy.toString());
+    console.log(req.user._id.toString());
         if (post.postedBy.toString() !== req.user._id.toString()) return res.status(401).json({ error: "Unauthorised" })
+        if(post.img){
+           const imgId= post.img.split("/").pop().split(".")[0]
+           await cloudinary.uploader.destroy(imgId)
+        }
         await Post.findByIdAndDelete(req.params.id)
         res.status(200).json({ message: "Post Deleted" })
     } catch (err) {

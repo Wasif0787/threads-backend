@@ -36,6 +36,10 @@ const postSchema = mongoose.Schema({
             username: {
                 type: String,
             },
+            timestamps: {
+                type: Date,
+                default: Date.now,
+            },
         },
     ],
 },
