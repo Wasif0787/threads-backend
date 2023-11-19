@@ -126,59 +126,59 @@ const followUnFollowUser = async (req, res) => {
 }
 
 const updateProfile = async (req, res) => {
-	const { name, email, username, password, bio } = req.body;
-	let { profilePic } = req.body;
+    const { name, email, username, password, bio } = req.body;
+    let { profilePic } = req.body;
 
-	const userId = req.user._id;
-	try {
-		let user = await User.findById(userId);
-		if (!user) return res.status(400).json({ error: "User not found" });
+    const userId = req.user._id;
+    try {
+        let user = await User.findById(userId);
+        if (!user) return res.status(400).json({ error: "User not found" });
 
-		if (req.params.id !== userId.toString())
-			return res.status(400).json({ error: "You cannot update other user's profile" });
+        if (req.params.id !== userId.toString())
+            return res.status(400).json({ error: "You cannot update other user's profile" });
 
-		if (password) {
-			const salt = await bcrypt.genSalt(10);
-			const hashedPassword = await bcrypt.hash(password, salt);
-			user.password = hashedPassword;
-		}
+        if (password) {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+            user.password = hashedPassword;
+        }
 
-		if (profilePic) {
-			if (user.profilePic) {
-				await cloudinary.uploader.destroy(user.profilePic.split("/").pop().split(".")[0]);
-			}
+        if (profilePic) {
+            if (user.profilePic) {
+                await cloudinary.uploader.destroy(user.profilePic.split("/").pop().split(".")[0]);
+            }
 
-			const uploadedResponse = await cloudinary.uploader.upload(profilePic);
-			profilePic = uploadedResponse.secure_url;
-		}
-		user.name = name || user.name;
-		user.email = email || user.email;
-		user.username = username || user.username;
-		user.profilePic = profilePic || user.profilePic;
-		user.bio = bio || user.bio;
+            const uploadedResponse = await cloudinary.uploader.upload(profilePic);
+            profilePic = uploadedResponse.secure_url;
+        }
+        user.name = name || user.name;
+        user.email = email || user.email;
+        user.username = username || user.username;
+        user.profilePic = profilePic || user.profilePic;
+        user.bio = bio || user.bio;
 
-		user = await user.save();
+        user = await user.save();
 
-		// Find all posts that this user replied and update username and userProfilePic fields
-		await Post.updateMany(
-			{ "replies.userId": userId },
-			{
-				$set: {
-					"replies.$[reply].username": user.username,
-					"replies.$[reply].userProfilePic": user.profilePic,
-				},
-			},
-			{ arrayFilters: [{ "reply.userId": userId }] }
-		);
+        // Find all posts that this user replied and update username and userProfilePic fields
+        await Post.updateMany(
+            { "replies.userId": userId },
+            {
+                $set: {
+                    "replies.$[reply].username": user.username,
+                    "replies.$[reply].userProfilePic": user.profilePic,
+                },
+            },
+            { arrayFilters: [{ "reply.userId": userId }] }
+        );
 
-		// password should be null in response
-		user.password = null;
+        // password should be null in response
+        user.password = null;
 
-		res.status(200).json(user);
-	} catch (err) {
-		res.status(500).json({ error: err.message });
-		console.log("Error in updateUser: ", err.message);
-	}
+        res.status(200).json(user);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+        console.log("Error in updateUser: ", err.message);
+    }
 };
 
 
@@ -210,4 +210,33 @@ const getSuggestedUser = async (req, res) => {
     }
 };
 
-export { signupUser, loginUser, logoutUser, followUnFollowUser, updateProfile, getUserProfile, getSuggestedUser }
+const getSearchedUser = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { query } = req.params;
+
+        // Use a regular expression to perform a case-insensitive search for username or name containing the query
+        const users = await User.find({
+            $and: [
+                {
+                    _id: { $ne: userId }, // Exclude the current user
+                    $or: [
+                        { username: { $regex: query, $options: 'i' } },
+                        { name: { $regex: query, $options: 'i' } },
+                    ],
+                },
+            ],
+        }).select("-password").select("-updatedAt");
+
+        if (!users || users.length === 0) {
+            return res.status(404).json({ error: "No matching users found" });
+        }
+
+        res.status(200).json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+export { signupUser, loginUser, logoutUser, followUnFollowUser, updateProfile, getUserProfile, getSuggestedUser, getSearchedUser }
